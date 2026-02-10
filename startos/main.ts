@@ -39,19 +39,28 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const torrc = generateTorrc(store || { onionServices: {}, relay: undefined })
   await writeFile(`${torSub.rootfs}/etc/tor/torrc`, torrc)
 
-  return sdk.Daemons.of(effects).addDaemon('tor', {
-    subcontainer: torSub,
-    exec: {
-      command: sdk.useEntrypoint(),
-    },
-    ready: {
-      display: i18n('Tor SOCKS Proxy'),
-      fn: () =>
-        sdk.healthCheck.checkPortListening(effects, socksPort, {
-          successMessage: i18n('Tor is running'),
-          errorMessage: i18n('Tor is not ready'),
-        }),
-    },
-    requires: [],
-  })
+  return sdk.Daemons.of(effects)
+    .addOneshot('chown', {
+      subcontainer: torSub,
+      exec: {
+        command: ['chown', '-R', 'tor:tor', '/var/lib/tor'],
+        user: 'root',
+      },
+      requires: [],
+    })
+    .addDaemon('tor', {
+      subcontainer: torSub,
+      exec: {
+        command: sdk.useEntrypoint(),
+      },
+      ready: {
+        display: i18n('Tor SOCKS Proxy'),
+        fn: () =>
+          sdk.healthCheck.checkPortListening(effects, socksPort, {
+            successMessage: i18n('Tor is running'),
+            errorMessage: i18n('Tor is not ready'),
+          }),
+      },
+      requires: ['chown'],
+    })
 })
