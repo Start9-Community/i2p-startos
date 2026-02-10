@@ -34,6 +34,8 @@ export default {
     29: 'Tasa de ancho de banda',
     30: 'Ráfaga de ancho de banda',
     31: 'Relé',
+    32: 'Puerto OR del relé Tor',
+    33: 'Puerto de relé Tor para la red Tor',
   },
   de_DE: {
     0: 'Tor wird gestartet!',
@@ -68,6 +70,8 @@ export default {
     29: 'Bandbreitenrate',
     30: 'Bandbreitenstoß',
     31: 'Relay',
+    32: 'Tor-Relay-OR-Port',
+    33: 'Tor-Relay-Port für das Tor-Netzwerk',
   },
   pl_PL: {
     0: 'Uruchamianie Tor!',
@@ -102,6 +106,8 @@ export default {
     29: 'Szybkość przepustowości',
     30: 'Skok przepustowości',
     31: 'Przekaźnik',
+    32: 'Port OR przekaźnika Tor',
+    33: 'Port przekaźnika Tor dla sieci Tor',
   },
   fr_FR: {
     0: 'Démarrage de Tor !',
@@ -136,5 +142,7 @@ export default {
     29: 'Débit de bande passante',
     30: 'Rafale de bande passante',
     31: 'Relais',
+    32: 'Port OR du relais Tor',
+    33: 'Port de relais Tor pour le réseau Tor',
   },
 } satisfies Record<string, LangDict>

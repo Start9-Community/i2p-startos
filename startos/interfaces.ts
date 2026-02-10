@@ -1,21 +1,26 @@
 import { i18n } from './i18n'
 import { sdk } from './sdk'
-
-const socksPort = 9050
+import { storeJson } from './fileModels/store.json'
 
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
-  const socksMulti = sdk.MultiHost.of(effects, 'socks-multi')
-  const socksOrigin = await socksMulti.bindPort(socksPort, {
+  const relay = await storeJson.read((s) => s.relay).const(effects)
+
+  if (!relay?.enabled) return []
+
+  const orPort = relay.orPort ?? 9001
+
+  const orMulti = sdk.MultiHost.of(effects, 'or-multi')
+  const orOrigin = await orMulti.bindPort(orPort, {
     protocol: null,
-    preferredExternalPort: socksPort,
+    preferredExternalPort: orPort,
     addSsl: null,
     secure: null,
   })
 
-  const socksInterface = sdk.createInterface(effects, {
-    name: i18n('Tor SOCKS Proxy'),
-    id: 'socks',
-    description: i18n('SOCKS5 proxy for private browsing'),
+  const orInterface = sdk.createInterface(effects, {
+    name: i18n('Tor Relay OR Port'),
+    id: 'or',
+    description: i18n('Tor relay port for the Tor network'),
     type: 'api',
     masked: false,
     schemeOverride: null,
@@ -24,6 +29,6 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     query: {},
   })
 
-  const receipt = await socksOrigin.export([socksInterface])
+  const receipt = await orOrigin.export([orInterface])
   return [receipt]
 })

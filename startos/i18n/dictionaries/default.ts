@@ -33,6 +33,8 @@ const dict = {
   'Bandwidth Rate': 29,
   'Bandwidth Burst': 30,
   Relay: 31,
+  'Tor Relay OR Port': 32,
+  'Tor relay port for the Tor network': 33,
 } as const
 
 export type I18nKey = keyof typeof dict
