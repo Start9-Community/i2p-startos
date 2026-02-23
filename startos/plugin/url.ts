@@ -32,7 +32,7 @@ export const exportUrls = sdk.plugin.url.setupExportedUrls(
                 hostId,
                 internalPort: portInfo.internalPort,
                 ssl: portInfo.ssl,
-                public: false,
+                public: true,
                 hostname: hostname.trim(),
                 port: parseInt(externalPort, 10),
                 info: null,
