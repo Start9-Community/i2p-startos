@@ -46,6 +46,7 @@ export default {
     45: 'Direcciones',
     46: 'Dirección Onion',
     47: 'Seleccione qué direcciones .onion importar',
+    48: 'Esta interfaz no soporta SSL',
   },
   de_DE: {
     0: 'Tor wird gestartet!',
@@ -92,6 +93,7 @@ export default {
     45: 'Adressen',
     46: 'Onion-Adresse',
     47: 'Wählen Sie aus, welche .onion-Adressen importiert werden sollen',
+    48: 'Diese Schnittstelle unterstützt kein SSL',
   },
   pl_PL: {
     0: 'Uruchamianie Tor!',
@@ -138,6 +140,7 @@ export default {
     45: 'Adresy',
     46: 'Adres Onion',
     47: 'Wybierz, które adresy .onion zaimportować',
+    48: 'Ten interfejs nie obsługuje SSL',
   },
   fr_FR: {
     0: 'Démarrage de Tor !',
@@ -184,5 +187,6 @@ export default {
     45: 'Adresses',
     46: 'Adresse Onion',
     47: 'Sélectionnez les adresses .onion à importer',
+    48: 'Cette interface ne prend pas en charge SSL',
   },
 } satisfies Record<string, LangDict>

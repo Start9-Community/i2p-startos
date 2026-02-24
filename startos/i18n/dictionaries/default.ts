@@ -45,6 +45,7 @@ const dict = {
   Addresses: 45,
   'Onion Address': 46,
   'Select which .onion addresses to import': 47,
+  'This interface does not support SSL': 48,
 } as const
 
 export type I18nKey = keyof typeof dict

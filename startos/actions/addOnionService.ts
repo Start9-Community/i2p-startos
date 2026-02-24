@@ -33,12 +33,33 @@ const inputSpec = InputSpec.of({
     hostId: string
     internalPort: number
   }>(),
-  alsoSsl: Value.toggle({
-    name: i18n('Also SSL'),
-    description: i18n('Also serve this address with SSL'),
-    default: false,
-  }),
 }).add(({ Value }) => ({
+  alsoSsl: Value.dynamicToggle(async ({ effects, prefill }) => {
+    let disabled = true
+
+    if (
+      prefill?.urlPluginMetadata?.packageId &&
+      prefill.urlPluginMetadata.interfaceId
+    ) {
+      const iface = await sdk.serviceInterface
+        .get(effects, {
+          packageId: prefill?.urlPluginMetadata?.packageId,
+          id: prefill.urlPluginMetadata.interfaceId,
+        })
+        .once()
+      if (iface?.addressInfo?.internalPort) {
+        disabled =
+          !iface?.host?.bindings[iface.addressInfo?.internalPort].options.addSsl
+      }
+    }
+
+    return {
+      name: i18n('Also SSL'),
+      description: i18n('Also serve this address with SSL'),
+      default: false,
+      disabled: disabled ? i18n('This interface does not support SSL') : false,
+    }
+  }),
   address: Value.dynamicUnion(async ({ prefill }) => {
     const { packageId, hostId, internalPort } = prefill?.urlPluginMetadata ?? {}
 
@@ -124,7 +145,8 @@ export const addOnionService = sdk.Action.withInput(
 
   // execution
   async ({ effects, input }) => {
-    const { packageId, hostId, internalPort } = input.urlPluginMetadata
+    const { packageId, hostId, interfaceId, internalPort } =
+      input.urlPluginMetadata
     const address = input.address as {
       selection: string
       value: { privateKey?: string | null }
@@ -134,15 +156,11 @@ export const addOnionService = sdk.Action.withInput(
       packageId === 'STARTOS' ? 'startos' : `${packageId}.startos`
 
     // Look up the binding for this internalPort
-    const hosts = await sdk.serviceInterface
-      .getAll(effects, { packageId }, (ifaces) =>
-        ifaces
-          .filter((i) => i.addressInfo?.hostId === hostId && i.host)
-          .map((i) => i.host!),
-      )
+    const iface = await sdk.serviceInterface
+      .get(effects, { packageId, id: interfaceId })
       .once()
 
-    const host = hosts[0]
+    const host = iface?.host
     const binding = host?.bindings[internalPort]
 
     // Build port entries: Record<externalPort, { target, ssl, internalPort }>
