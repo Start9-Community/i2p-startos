@@ -1,6 +1,6 @@
 import { createHash } from 'crypto'
-import { ed25519 } from '@noble/curves/ed25519'
-import { bytesToNumberLE } from '@noble/curves/utils'
+import { ed25519 } from '@noble/curves/ed25519.js'
+import { bytesToNumberLE } from '@noble/curves/utils.js'
 import { base32 } from 'rfc4648'
 
 const SECRET_KEY_HEADER = Buffer.from('== ed25519v1-secret: type0 ==\0\0\0')
