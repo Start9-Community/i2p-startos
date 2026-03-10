@@ -18,6 +18,21 @@ function deriveOnionHostname(pubBytes: Uint8Array): string {
   )
 }
 
+/**
+ * Check whether the first 32 bytes of an expanded ed25519 key are properly
+ * clamped per RFC 8032 §5.1.5:
+ *   - lowest 3 bits of byte 0 cleared
+ *   - bit 255 (high bit of byte 31) cleared
+ *   - bit 254 (second-high bit of byte 31) set
+ */
+export function isClamped(scalar: Uint8Array): boolean {
+  if (scalar.length < 32) return false
+  if ((scalar[0] & 7) !== 0) return false
+  if ((scalar[31] & 128) !== 0) return false
+  if ((scalar[31] & 64) === 0) return false
+  return true
+}
+
 export function generateOnionFiles(privateKeyBase64?: string | null): {
   secretKey: Buffer
   hostname: string
@@ -26,9 +41,15 @@ export function generateOnionFiles(privateKeyBase64?: string | null): {
     // User-provided key: 64-byte expanded key (no header)
     const expanded = Buffer.from(privateKeyBase64, 'base64')
     const scalar = expanded.subarray(0, 32)
-    const pubBytes = ed25519.Point.BASE.multiply(
-      bytesToNumberLE(scalar),
-    ).toBytes()
+    // Reduce scalar mod curve order before multiplying, matching what
+    // @noble/curves does internally in getExtendedPublicKey(). Clamped
+    // ed25519 scalars have bit 254 set (~2^254) which exceeds the curve
+    // order (~2^252), so multiply() rejects them without this reduction.
+    const scalarN = bytesToNumberLE(scalar) % ed25519.Point.Fn.ORDER
+    if (scalarN === BigInt(0)) {
+      throw new Error('Invalid key: scalar is zero mod curve order')
+    }
+    const pubBytes = ed25519.Point.BASE.multiply(scalarN).toBytes()
     const secretKey = Buffer.concat([SECRET_KEY_HEADER, expanded])
     return { secretKey, hostname: deriveOnionHostname(pubBytes) }
   }
