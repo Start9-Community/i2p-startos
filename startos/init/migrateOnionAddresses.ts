@@ -94,11 +94,7 @@ export const migrateOnionAddresses = sdk.setupOnInit(async (effects) => {
     console.info(`Imported onion address for ${packageId}/${hostId}`)
   }
 
-  await torrc.write(effects, {
-    ...config,
-    relay: config?.relay ?? { enabled: false },
-    onionServices,
-  })
+  await torrc.merge(effects, { onionServices })
 
   await rename(
     migrationFile.path,

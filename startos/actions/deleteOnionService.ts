@@ -90,10 +90,6 @@ export const deleteOnionService = sdk.Action.withInput(
       delete onionServices[packageId]
     }
 
-    await torrc.write(effects, {
-      ...config,
-      relay: config?.relay ?? { enabled: false },
-      onionServices,
-    })
+    await torrc.merge(effects, { onionServices })
   },
 )

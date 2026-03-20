@@ -1,3 +1,4 @@
+import { utils } from '@start9labs/start-sdk'
 import { torrc } from '../fileModels/torrc'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
@@ -32,9 +33,9 @@ export const relayInputSpec = InputSpec.of({
     required: false,
     default: null,
     placeholder: 'email@example.com',
-    patterns: [],
+    patterns: [utils.Patterns.email],
     masked: false,
-    inputmode: 'text',
+    inputmode: 'email',
     minLength: null,
     maxLength: null,
   }),
@@ -53,29 +54,27 @@ export const relayInputSpec = InputSpec.of({
     placeholder: null,
     units: null,
   }),
-  bandwidthRate: Value.text({
+  bandwidthRate: Value.number({
     name: i18n('Bandwidth Rate'),
     description: null,
     required: false,
-    default: '1 MBytes',
-    placeholder: '1 MBytes',
-    patterns: [],
-    masked: false,
-    inputmode: 'text',
-    minLength: null,
-    maxLength: null,
+    default: 1,
+    min: 1,
+    max: null,
+    integer: true,
+    placeholder: null,
+    units: 'MB/s',
   }),
-  bandwidthBurst: Value.text({
+  bandwidthBurst: Value.number({
     name: i18n('Bandwidth Burst'),
     description: null,
     required: false,
-    default: '2 MBytes',
-    placeholder: '2 MBytes',
-    patterns: [],
-    masked: false,
-    inputmode: 'text',
-    minLength: null,
-    maxLength: null,
+    default: 2,
+    min: 1,
+    max: null,
+    integer: true,
+    placeholder: null,
+    units: 'MB/s',
   }),
 })
 
@@ -84,7 +83,7 @@ export const configureRelay = sdk.Action.withInput(
   'configure-relay',
 
   // metadata
-  async ({ effects }) => ({
+  async () => ({
     name: i18n('Configure Relay'),
     description: i18n('Configure Tor relay and bridge settings'),
     warning: null,
@@ -96,33 +95,22 @@ export const configureRelay = sdk.Action.withInput(
   // input spec
   relayInputSpec,
 
-  // pre-fill form
+  // pre-fill from current config; InputSpec defaults fill any undefined fields
   async ({ effects }) => {
-    const config = await torrc.read().once()
-    const relay = config?.relay
-
-    return {
-      enabled: relay?.enabled ?? false,
-      nickname: relay?.nickname ?? 'StartOSRelay',
-      contactInfo: relay?.contactInfo ?? '',
-      bridge: relay?.bridge ?? false,
-      orPort: relay?.orPort ?? 9001,
-      bandwidthRate: relay?.bandwidthRate ?? '1 MBytes',
-      bandwidthBurst: relay?.bandwidthBurst ?? '2 MBytes',
-    }
+    return (await torrc.read((s) => s.relay).once()) ?? {}
   },
 
-  // execution function
+  // execution: merge relay input, converting nulls to undefined for zod .catch() defaults
   async ({ effects, input }) => {
     await torrc.merge(effects, {
       relay: {
         enabled: input.enabled,
-        nickname: input.nickname ?? 'StartOSRelay',
-        contactInfo: input.contactInfo ?? '',
+        nickname: input.nickname ?? undefined,
+        contactInfo: input.contactInfo ?? undefined,
         bridge: input.bridge,
-        orPort: input.orPort ?? 9001,
-        bandwidthRate: input.bandwidthRate ?? '1 MBytes',
-        bandwidthBurst: input.bandwidthBurst ?? '2 MBytes',
+        orPort: input.orPort ?? undefined,
+        bandwidthRate: input.bandwidthRate ?? undefined,
+        bandwidthBurst: input.bandwidthBurst ?? undefined,
       },
     })
   },

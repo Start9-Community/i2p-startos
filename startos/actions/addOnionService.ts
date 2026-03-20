@@ -243,10 +243,6 @@ export const addOnionService = sdk.Action.withInput(
       await sdk.volumes.tor.writeFile(`${dir}/hostname`, hostname + '\n')
     }
 
-    await torrc.write(effects, {
-      ...config,
-      relay: config?.relay ?? { enabled: false },
-      onionServices,
-    })
+    await torrc.merge(effects, { onionServices })
   },
 )

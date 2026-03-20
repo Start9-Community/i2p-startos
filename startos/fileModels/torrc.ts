@@ -13,12 +13,12 @@ export const onionServiceEntryShape = z.object({
 
 export const relayShape = z.object({
   enabled: z.boolean().catch(false),
-  nickname: z.string().optional().catch(undefined),
+  nickname: z.string().min(1).optional().catch(undefined),
   contactInfo: z.string().optional().catch(undefined),
-  bridge: z.boolean().optional().catch(undefined),
-  orPort: z.number().optional().catch(undefined),
-  bandwidthRate: z.string().optional().catch(undefined),
-  bandwidthBurst: z.string().optional().catch(undefined),
+  bridge: z.boolean().catch(false),
+  orPort: z.number().catch(9001),
+  bandwidthRate: z.number().catch(1),
+  bandwidthBurst: z.number().catch(2),
 })
 
 const shape = z.object({
@@ -28,7 +28,13 @@ const shape = z.object({
       z.record(z.string(), z.record(z.string(), onionServiceEntryShape)),
     )
     .catch({}),
-  relay: relayShape.catch({ enabled: false }),
+  relay: relayShape.catch({
+    enabled: false,
+    bridge: false,
+    orPort: 9001,
+    bandwidthRate: 1,
+    bandwidthBurst: 2,
+  }),
 })
 
 export type TorrcConfig = z.infer<typeof shape>
@@ -37,6 +43,11 @@ export function hsDir(packageId: string, hostId: string, index: string) {
   return `hidden_services/${packageId}/${hostId}/hs_${index}`
 }
 
+/**
+ * Returns the next sequential numeric key (as a string) for a record.
+ * Gaps from deleted keys are intentionally NOT reused, since keys map to
+ * HiddenServiceDir paths containing cryptographic key material.
+ */
 export function nextKey(record: Record<string, unknown>): string {
   return String(
     Object.keys(record)
@@ -46,6 +57,11 @@ export function nextKey(record: Record<string, unknown>): string {
   )
 }
 
+/**
+ * Serializes structured config to a torrc file.
+ * Embeds `# @service` and `# @ssl` comment annotations so fromFile() can
+ * reconstruct the structured data (packageId, hostId, SSL status) on read.
+ */
 function toFile(config: TorrcConfig): string {
   const lines: string[] = [
     'SocksPort 0.0.0.0:9050',
@@ -58,6 +74,7 @@ function toFile(config: TorrcConfig): string {
   for (const [packageId, hosts] of Object.entries(onionServices)) {
     for (const [hostId, services] of Object.entries(hosts)) {
       Object.entries(services).forEach(([index, svc]) => {
+        if (Object.keys(svc.ports).length === 0) return
         lines.push(`# @service ${packageId} ${hostId}`)
         lines.push(
           `HiddenServiceDir /var/lib/tor/${hsDir(packageId, hostId, index)}/`,
@@ -77,8 +94,8 @@ function toFile(config: TorrcConfig): string {
     if (relay.nickname) lines.push(`Nickname ${relay.nickname}`)
     if (relay.contactInfo) lines.push(`ContactInfo ${relay.contactInfo}`)
     if (relay.bridge) lines.push('BridgeRelay 1')
-    lines.push(`RelayBandwidthRate ${relay.bandwidthRate}`)
-    lines.push(`RelayBandwidthBurst ${relay.bandwidthBurst}`)
+    lines.push(`RelayBandwidthRate ${relay.bandwidthRate} MBytes`)
+    lines.push(`RelayBandwidthBurst ${relay.bandwidthBurst} MBytes`)
     lines.push('ExitRelay 0')
     lines.push('')
   }
@@ -86,10 +103,17 @@ function toFile(config: TorrcConfig): string {
   return lines.join('\n')
 }
 
+/**
+ * Parses a torrc file back into structured config.
+ * Uses a state machine to group HiddenServiceDir/HiddenServicePort blocks,
+ * reading `# @service` and `# @ssl` annotations to recover metadata.
+ * Bandwidth values are stored as numbers in MBytes; parseInt extracts the
+ * leading number from the "N MBytes" format we always write.
+ */
 function fromFile(raw: string): unknown {
   const res: z.infer<typeof shape> = {
     onionServices: {},
-    relay: { enabled: false },
+    relay: { enabled: false, bridge: false, orPort: 9001, bandwidthRate: 1, bandwidthBurst: 2 },
   }
 
   const lines = raw.split('\n')
@@ -178,9 +202,9 @@ function fromFile(raw: string): unknown {
     } else if (trimmed === 'BridgeRelay 1') {
       res.relay.bridge = true
     } else if ((m = trimmed.match(/^RelayBandwidthRate (.+)/))) {
-      res.relay.bandwidthRate = m[1]
+      res.relay.bandwidthRate = parseInt(m[1], 10) || 1
     } else if ((m = trimmed.match(/^RelayBandwidthBurst (.+)/))) {
-      res.relay.bandwidthBurst = m[1]
+      res.relay.bandwidthBurst = parseInt(m[1], 10) || 2
     }
   }
 
