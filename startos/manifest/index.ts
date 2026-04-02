@@ -11,7 +11,7 @@ export const manifest = setupManifest({
   donationUrl: 'https://i2pd.website/en/donate',
   docsUrls: ['https://i2pd.readthedocs.io/'],
   description: i18n.description,
-  volumes: ['i2pd', 'startos'],
+  volumes: ['i2pd'],
   images: {
     i2pd: {
       source: { dockerBuild: {} },
@@ -19,6 +19,7 @@ export const manifest = setupManifest({
     },
   },
   alerts: {
+    install: i18n.alertInstall,
     uninstall: i18n.alertUninstall,
   },
   dependencies: {},

@@ -121,6 +121,14 @@ export const addI2pTunnel = sdk.Action.withInput(
       value: unknown
     }
 
+    // I2P's own proxy interfaces (SOCKS 4447, HTTP 4444) are outbound-only
+    // proxy ports — assigning an inbound .b32.i2p tunnel to them is nonsensical.
+    if (packageId === 'i2p') {
+      throw new Error(
+        i18n('I2P proxy interfaces cannot receive I2P tunnel addresses'),
+      )
+    }
+
     // null packageId means the StartOS system UI interface (no backing package)
     const pkgKey: string = packageId ?? 'STARTOS'
     const defaultHost = packageId ? `${packageId}.startos` : 'startos'

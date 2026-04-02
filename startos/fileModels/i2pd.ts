@@ -91,9 +91,15 @@ function generateI2pdConf(config: I2pdConfig): string {
   lines.push('port = 7070')
   lines.push('')
 
+  lines.push('[httpproxy]')
+  lines.push('enabled = true')
+  lines.push('address = 0.0.0.0')
+  lines.push('port = 4444')
+  lines.push('')
+
   lines.push('[socksproxy]')
   lines.push('enabled = true')
-  lines.push('address = 127.0.0.1')
+  lines.push('address = 0.0.0.0')
   lines.push('port = 4447')
   lines.push('')
 

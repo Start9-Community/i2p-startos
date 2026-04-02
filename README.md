@@ -16,7 +16,7 @@ I2P network. Provides SOCKS and HTTP proxies for accessing I2P addresses, and
 can optionally operate as a floodfill node to support the network.
 
 - **Upstream repo:** <https://github.com/PurpleI2P/i2pd>
-- **Wrapper repo:** <https://github.com/Start9Labs/i2p-startos>
+- **Wrapper repo:** <https://github.com/crissuper20/i2p-startos>
 
 ---
 
@@ -46,7 +46,7 @@ can optionally operate as a floodfill node to support the network.
 | Entrypoint    | `i2pd --conf=/etc/i2pd/i2pd.conf --datadir=/var/lib/i2pd` |
 | User          | `i2pd` (non-root)                              |
 
-The image is minimal -- just Alpine + the `i2pd` package. No custom patches
+The image is minimal, just Alpine + the `i2pd` package. No custom patches
 or modifications to the I2Pd binary.
 
 ---

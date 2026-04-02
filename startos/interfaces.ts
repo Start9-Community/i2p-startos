@@ -12,7 +12,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     protocol: null,
     preferredExternalPort: 4447,
     addSsl: null,
-    secure: null,
+    secure: { ssl: false },
   })
 
   const socksInterface = sdk.createInterface(effects, {
@@ -21,7 +21,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     description: i18n('SOCKS proxy for I2P network (i2p addresses only)'),
     type: 'api',
     masked: false,
-    schemeOverride: null,
+    schemeOverride: { ssl: null, noSsl: 'socks5' },
     username: null,
     path: '',
     query: {},
@@ -32,7 +32,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     protocol: null,
     preferredExternalPort: 4444,
     addSsl: null,
-    secure: null,
+    secure: { ssl: false },
   })
 
   const httpInterface = sdk.createInterface(effects, {
@@ -41,7 +41,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     description: i18n('HTTP proxy for I2P network (i2p addresses only)'),
     type: 'api',
     masked: false,
-    schemeOverride: null,
+    schemeOverride: { ssl: null, noSsl: 'http' },
     username: null,
     path: '',
     query: {},

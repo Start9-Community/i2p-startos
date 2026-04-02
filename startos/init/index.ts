@@ -5,7 +5,6 @@ import { versionGraph } from '../versions'
 import { actions } from '../actions'
 import { restoreInit } from '../backups'
 import { registerUrlPlugin, exportUrls } from '../plugin/url'
-import { migrateI2pAddresses } from './migrateI2pAddresses'
 import { seedI2pdConfig } from './seedI2pdConfig'
 
 export const init = sdk.setupInit(
@@ -16,7 +15,6 @@ export const init = sdk.setupInit(
   setDependencies,
   actions,
   registerUrlPlugin,
-  migrateI2pAddresses,
   exportUrls,
 )
 

@@ -54,6 +54,12 @@ const dict = {
   'Cannot Enable Floodfill': 50,
   'Floodfill requires at least Standard (O) bandwidth. Increase the bandwidth setting first.': 51,
   'Participate as a floodfill router. Requires stable uptime, port forwarding, and at least Standard bandwidth.': 52,
+  'I2P proxy interfaces cannot receive I2P tunnel addresses': 53,
+  'Reseed successful': 54,
+  'Reseed completed': 55,
+  'Known routers': 56,
+  'no change. Router database may already be up to date': 57,
+  'Reseed could not be verified. Check I2P logs for details.': 58,
 } as const
 
 export type I18nKey = keyof typeof dict

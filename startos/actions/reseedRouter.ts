@@ -97,15 +97,14 @@ export const reseedRouter = sdk.Action.withInput(
     if (beforeCount !== null && afterCount !== null) {
       const diff = afterCount - beforeCount
       if (diff > 0) {
-        message = `Reseed successful. Known routers: ${beforeCount} → ${afterCount} (+${diff}).`
+        message = `${i18n('Reseed successful')}. ${i18n('Known routers')}: ${beforeCount} → ${afterCount} (+${diff}).`
       } else {
-        message = `Reseed completed. Known routers: ${afterCount} (no change — router database may already be up to date).`
+        message = `${i18n('Reseed completed')}. ${i18n('Known routers')}: ${afterCount} (${i18n('no change. Router database may already be up to date')}).`
       }
     } else if (afterCount !== null) {
-      message = `Reseed completed. Known routers: ${afterCount}.`
+      message = `${i18n('Reseed completed')}. ${i18n('Known routers')}: ${afterCount}.`
     } else {
-      message =
-        'Reseed was requested but could not verify the result. Check I2P logs for details.'
+      message = i18n('Reseed could not be verified. Check I2P logs for details.')
     }
 
     return {

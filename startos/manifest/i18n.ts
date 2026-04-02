@@ -1,4 +1,16 @@
 export default {
+  alertInstall: {
+    en_US:
+      'I2P takes 3–10 minutes to integrate into the network after first start. The service will show as loading during this time, this is normal.',
+    es_ES:
+      'I2P tarda entre 3 y 10 minutos en integrarse a la red tras el primer inicio. El servicio aparecerá como cargando durante este tiempo, esto es normal.',
+    de_DE:
+      'I2P benötigt nach dem ersten Start 3–10 Minuten, um sich ins Netzwerk zu integrieren. Der Dienst wird in dieser Zeit als „Wird geladen" angezeigt, das ist normal.',
+    pl_PL:
+      'Po pierwszym uruchomieniu I2P potrzebuje od 3 do 10 minut na integrację z siecią. Usługa będzie wyświetlana jako ładująca się, to normalne.',
+    fr_FR:
+      "I2P met 3 à 10 minutes à s'intégrer au réseau après le premier démarrage. Le service s'affichera comme en cours de chargement pendant ce temps, c'est normal.",
+  },
   alertUninstall: {
     en_US:
       'Uninstalling I2P will permanently delete all I2P tunnel keys and .b32.i2p addresses. Services that depend on these addresses will no longer be reachable over I2P. Please make a backup first if you want to preserve your addresses.',
