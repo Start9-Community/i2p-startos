@@ -42,16 +42,17 @@ export function generateI2pKey(): { keyfile: Buffer; hostname: string } {
 
   // Build the 391-byte i2p Destination
   const destination = Buffer.alloc(391)
-  elgPub.copy(destination, 0)           // ElGamal pub → bytes 0-255
-  destination.set(edPub, 256)           // Ed25519 pub → bytes 256-287
-  destination[384] = 0x05               // KeyCertificate
-  destination.writeUInt16BE(4, 385)     // cert length = 4
-  destination.writeUInt16BE(7, 387)     // sigType = EdDSA-SHA512-ED25519
-  destination.writeUInt16BE(0, 389)     // encType = ElGamal
+  elgPub.copy(destination, 0) // ElGamal pub → bytes 0-255
+  destination.set(edPub, 256) // Ed25519 pub → bytes 256-287
+  destination[384] = 0x05 // KeyCertificate
+  destination.writeUInt16BE(4, 385) // cert length = 4
+  destination.writeUInt16BE(7, 387) // sigType = EdDSA-SHA512-ED25519
+  destination.writeUInt16BE(0, 389) // encType = ElGamal
 
   // .b32.i2p = base32(SHA256(destination)), no padding, lowercase
   const hash = createHash('sha256').update(destination).digest()
-  const hostname = base32.stringify(hash, { pad: false }).toLowerCase() + '.b32.i2p'
+  const hostname =
+    base32.stringify(hash, { pad: false }).toLowerCase() + '.b32.i2p'
 
   // .dat file = destination + private keys (i2pd reads: signing key first, then crypto key)
   const keyfile = Buffer.concat([destination, Buffer.from(edSeed), elgPriv])
@@ -66,9 +67,10 @@ export function generateI2pKey(): { keyfile: Buffer; hostname: string } {
  *
  * Pass null to auto-generate a new key pair instead.
  */
-export function parseI2pKey(
-  base64Key: string | null,
-): { keyfile: Buffer; hostname: string } {
+export function parseI2pKey(base64Key: string | null): {
+  keyfile: Buffer
+  hostname: string
+} {
   if (!base64Key) return generateI2pKey()
 
   const keyfile = Buffer.from(base64Key.replace(/\s+/g, ''), 'base64')

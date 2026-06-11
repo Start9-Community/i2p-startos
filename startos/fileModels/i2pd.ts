@@ -25,7 +25,11 @@ export const routerShape = z.object({
   // (LXC bridge MASQUERADE + home router), so setting the external IP (e.g. a
   // VPS with port 4450 UDP forwarded to this machine) makes i2pd classify as
   // O-type and publish LeaseSets successfully.
-  externalHost: z.string().regex(/^[^\n\r]*$/).optional().catch(undefined),
+  externalHost: z
+    .string()
+    .regex(/^[^\n\r]*$/)
+    .optional()
+    .catch(undefined),
   // Custom reseed URL (su3-serving HTTPS endpoint).  Setting this to a
   // user-controlled floodfill node's reseed service ensures that the peer
   // pool at first boot already contains at least one O-type router, which
@@ -293,4 +297,3 @@ export const i2pdConfig = FileHelper.json(
   { base: sdk.volumes.i2pd, subpath: 'config.json' },
   shape,
 )
-

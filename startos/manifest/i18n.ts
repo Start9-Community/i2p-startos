@@ -25,8 +25,10 @@ export default {
   },
   description: {
     short: {
-      en_US: 'Peer-to-peer network for I2P services and decentralized applications',
-      es_ES: 'Red punto a punto para servicios I2P y aplicaciones descentralizadas',
+      en_US:
+        'Peer-to-peer network for I2P services and decentralized applications',
+      es_ES:
+        'Red punto a punto para servicios I2P y aplicaciones descentralizadas',
       de_DE: 'Peer-to-Peer-Netzwerk für I2P-Dienste und dezentrale Anwendungen',
       pl_PL: 'Sieć peer-to-peer dla usług I2P i aplikacji zdecentralizowanych',
       fr_FR:
@@ -46,4 +48,3 @@ export default {
     },
   },
 }
-

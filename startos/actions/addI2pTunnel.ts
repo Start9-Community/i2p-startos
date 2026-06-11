@@ -1,4 +1,10 @@
-import { i2pdConfig, nextKey, tunnelDir, generateI2pdConf, generateTunnelsConf } from '../fileModels/i2pd'
+import {
+  i2pdConfig,
+  nextKey,
+  tunnelDir,
+  generateI2pdConf,
+  generateTunnelsConf,
+} from '../fileModels/i2pd'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { parseI2pKey, reloadI2pdTunnels } from '../utils'
@@ -41,12 +47,16 @@ const inputSpec = InputSpec.of({
   }),
 }).add(({ Value }) => ({
   address: Value.dynamicUnion(async ({ prefill }) => {
-    const { packageId, hostId, internalPort } = prefill?.urlPluginMetadata ?? {}
+    const {
+      packageId: rawPkgId,
+      hostId,
+      internalPort,
+    } = prefill?.urlPluginMetadata ?? {}
+    const packageId = rawPkgId ?? 'STARTOS'
 
     const config = await i2pdConfig.read().once()
     const entries =
-      (packageId && hostId && config?.i2pServices?.[packageId]?.[hostId]) ||
-      {}
+      (packageId && hostId && config?.i2pServices?.[packageId]?.[hostId]) || {}
 
     const variants: Record<
       string,
@@ -59,6 +69,7 @@ const inputSpec = InputSpec.of({
     for (const [key, entry] of Object.entries(entries)) {
       if (internalPort == null) continue
 
+      // Show address only if it partially serves this binding (has one of SSL/non-SSL but not both)
       const bindingPorts = Object.values(entry.ports).filter(
         (p) => p.internalPort === internalPort,
       )
@@ -69,7 +80,7 @@ const inputSpec = InputSpec.of({
       let hostname = key
       try {
         const content = await sdk.volumes.i2pd.readFile(
-          `${tunnelDir(packageId!, hostId!, key)}/hostname`,
+          `${tunnelDir(packageId, hostId!, key)}/hostname`,
         )
         hostname = content.toString().trim()
       } catch (e: any) {
@@ -137,31 +148,35 @@ export const addI2pTunnel = sdk.Action.withInput(
 
   async ({ effects, input }) => {
     if (!input.urlPluginMetadata) {
-      throw new Error(
-        'This action must be invoked through the URL plugin',
-      )
+      throw new Error('This action must be invoked through the URL plugin')
     }
-    const { packageId, hostId, interfaceId, internalPort } =
-      input.urlPluginMetadata
+    const {
+      packageId: rawPkgId,
+      hostId,
+      interfaceId,
+      internalPort,
+    } = input.urlPluginMetadata
+    // null packageId means the StartOS system UI interface (no backing package)
+    const packageId = rawPkgId ?? 'STARTOS'
     const address = input.address as {
       selection: string
-      value: unknown
+      value: { privateKey?: string | null }
     }
 
-    // I2P's own proxy interfaces (SOCKS 4447, HTTP 4444) are outbound-only
-    // assigning an inbound .b32.i2p tunnel to these is nonsensical.
+    // I2P's own interfaces (SOCKS/HTTP proxies, console, transports) are not
+    // tunnel targets — assigning an inbound .b32.i2p tunnel to them is nonsensical.
     if (packageId === 'i2p') {
       throw new Error(
         i18n('I2P proxy interfaces cannot receive I2P tunnel addresses'),
       )
     }
 
-    // null packageId means the StartOS system UI interface (no backing package)
-    const pkgKey: string = packageId ?? 'STARTOS'
-    const defaultHost = packageId ? `${packageId}.startos` : 'startos'
+    const defaultHost =
+      packageId === 'STARTOS' ? 'startos' : `${packageId}.startos`
 
+    // Look up the binding for this internalPort (STARTOS has no service interface)
     const iface =
-      packageId && interfaceId
+      packageId !== 'STARTOS'
         ? await sdk.serviceInterface
             .get(effects, { packageId, id: interfaceId })
             .once()
@@ -170,12 +185,19 @@ export const addI2pTunnel = sdk.Action.withInput(
     const host = iface?.host
     const binding = host?.bindings[internalPort]
 
+    // Build port entry: either SSL or non-SSL based on toggle
     const newPorts: Record<
       string,
       { target: string; ssl: boolean; internalPort: number }
     > = {}
 
-    if (input.ssl && binding?.options.addSsl) {
+    if (input.ssl && packageId === 'STARTOS') {
+      newPorts['443'] = {
+        target: `${defaultHost}:443`,
+        ssl: true,
+        internalPort: 80,
+      }
+    } else if (input.ssl && binding?.options.addSsl) {
       const sslAddr = binding.addresses.available.find(
         (a) =>
           a.ssl &&
@@ -190,48 +212,51 @@ export const addI2pTunnel = sdk.Action.withInput(
         }
       }
     } else {
-      if (!packageId || packageId === 'STARTOS') {
+      if (packageId === 'STARTOS') {
         newPorts['80'] = {
-          target: `startos:80`,
+          target: `${defaultHost}:80`,
           ssl: false,
           internalPort: 80,
         }
       } else if (binding?.enabled) {
+        // A binding that terminates its own TLS (native `secure.ssl`) has no
+        // plaintext endpoint, so a non-SSL tunnel can't honestly serve it.
+        if (binding.options.secure?.ssl === true) {
+          throw new Error(
+            `Cannot create a non-SSL I2P tunnel for "${packageId}": its interface is SSL-only. Create an SSL I2P tunnel instead.`,
+          )
+        }
         newPorts[String(binding.options.preferredExternalPort)] = {
           target: `${defaultHost}:${internalPort}`,
           ssl: false,
           internalPort,
         }
       } else {
-        newPorts[String(internalPort)] = {
-          target: `${defaultHost}:${internalPort}`,
-          ssl: false,
-          internalPort,
-        }
+        throw new Error(
+          `Cannot create an I2P tunnel for "${packageId}": interface binding ${internalPort} is not exposed, so there is no reachable endpoint to forward to.`,
+        )
       }
     }
 
     // Load current config
     const config = await i2pdConfig.read().once()
     const i2pServices = structuredClone(config?.i2pServices || {})
-    if (!i2pServices[pkgKey]) i2pServices[pkgKey] = {}
-    if (!i2pServices[pkgKey][hostId])
-      i2pServices[pkgKey][hostId] = {}
+    if (!i2pServices[packageId]) i2pServices[packageId] = {}
+    if (!i2pServices[packageId][hostId]) i2pServices[packageId][hostId] = {}
 
-    const services = i2pServices[pkgKey][hostId]
+    const services = i2pServices[packageId][hostId]
     let index: string
 
     if (address.selection === 'new') {
       index = nextKey(services)
-      const tunnelPath = tunnelDir(pkgKey, hostId, index)
-      const keyfileName = `${pkgKey}-${hostId}-${index}.dat`
+      const tunnelPath = tunnelDir(packageId, hostId, index)
+      const keyfileName = `${packageId}-${hostId}-${index}.dat`
 
       // Generate a new key pair or import an existing one (if privateKey provided).
       // parseI2pKey(null) falls back to generateI2pKey().
-      const privateKey =
-        (address.value as { privateKey?: string | null } | null)?.privateKey ??
-        null
-      const { keyfile, hostname } = parseI2pKey(privateKey)
+      const { keyfile, hostname } = parseI2pKey(
+        address.value?.privateKey ?? null,
+      )
       await sdk.volumes.i2pd.writeFile(`${tunnelPath}/${keyfileName}`, keyfile)
       await sdk.volumes.i2pd.writeFile(`${tunnelPath}/hostname`, hostname)
 
@@ -239,8 +264,26 @@ export const addI2pTunnel = sdk.Action.withInput(
     } else {
       // Reuse existing address
       index = address.selection
-      if (!services[index]) services[index] = { ports: {} }
-      services[index]!.ports = { ...services[index]!.ports, ...newPorts }
+      const existing = services[index]
+      if (existing) {
+        const duplicate = Object.values(existing.ports).some(
+          (p) => p.ssl === !!input.ssl && p.internalPort === internalPort,
+        )
+        if (duplicate) {
+          throw new Error(
+            input.ssl
+              ? i18n(
+                  'This I2P address already has an SSL binding for this port',
+                )
+              : i18n(
+                  'This I2P address already has a non-SSL binding for this port',
+                ),
+          )
+        }
+        existing.ports = { ...existing.ports, ...newPorts }
+      } else {
+        services[index] = { ports: newPorts }
+      }
     }
 
     // Build and write the full config in one pass, avoids a second read() call
@@ -248,11 +291,21 @@ export const addI2pTunnel = sdk.Action.withInput(
     const updatedConfig = {
       i2pServices,
       floodfill: config?.floodfill ?? { enabled: false },
-      router: config?.router ?? { bandwidth: 'O' as const, transit: true, loglevel: 'warn' as const },
+      router: config?.router ?? {
+        bandwidth: 'O' as const,
+        transit: true,
+        loglevel: 'warn' as const,
+      },
     }
     await i2pdConfig.write(effects, updatedConfig)
-    await sdk.volumes.i2pd.writeFile('etc/i2pd/i2pd.conf', generateI2pdConf(updatedConfig))
-    await sdk.volumes.i2pd.writeFile('etc/i2pd/tunnels.conf', generateTunnelsConf(updatedConfig))
+    await sdk.volumes.i2pd.writeFile(
+      'etc/i2pd/i2pd.conf',
+      generateI2pdConf(updatedConfig),
+    )
+    await sdk.volumes.i2pd.writeFile(
+      'etc/i2pd/tunnels.conf',
+      generateTunnelsConf(updatedConfig),
+    )
     await reloadI2pdTunnels()
     return null
   },

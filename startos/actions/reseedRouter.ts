@@ -77,9 +77,7 @@ export const reseedRouter = sdk.Action.withInput(
 
   async () => ({
     name: i18n('Reseed Router'),
-    description: i18n(
-      'Re-download router information from reseed servers',
-    ),
+    description: i18n('Re-download router information from reseed servers'),
     warning: null,
     allowedStatuses: 'any',
     group: null,
@@ -99,9 +97,7 @@ export const reseedRouter = sdk.Action.withInput(
     const consoleInfo = await fetchConsoleInfo()
     const token = consoleInfo.token
     if (!token) {
-      throw new Error(
-        i18n('Could not fetch console token — is i2pd running?'),
-      )
+      throw new Error(i18n('Could not fetch console token — is i2pd running?'))
     }
 
     // i2pd command names vary across versions/builds.
@@ -128,9 +124,7 @@ export const reseedRouter = sdk.Action.withInput(
           if (res.statusCode === 200 || res.statusCode === 302) {
             resolve()
           } else {
-            reject(
-              new Error(`Reseed returned HTTP ${res.statusCode}`),
-            )
+            reject(new Error(`Reseed returned HTTP ${res.statusCode}`))
           }
         },
       )
@@ -148,9 +142,7 @@ export const reseedRouter = sdk.Action.withInput(
     // new router infos in the background over 30–60 seconds; there is no
     // point waiting here — the count will rise on its own.
     const countStr =
-      beforeCount !== null
-        ? ` ${i18n('Known routers')}: ${beforeCount}.`
-        : ''
+      beforeCount !== null ? ` ${i18n('Known routers')}: ${beforeCount}.` : ''
 
     return {
       version: '1' as const,

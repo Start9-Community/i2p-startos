@@ -11,7 +11,10 @@ To browse the invisible web, configure your web browser's proxy settings to use 
 Please note that these proxies only work for routing traffic to internal .i2p and .b32.i2p addresses. They are not general-purpose privacy proxies for accessing the regular internet (clearnet).
 
 ## Hosting Services on I2P
-To assign a hidden .b32.i2p address to any installed application, open that specific service, navigate to the Interfaces section, and add a new I2P address from the URL table to make it accessible within the network.
+To assign a hidden .b32.i2p address to any installed application, open that specific service, navigate to the Interfaces section, and add a new I2P address from the URL table to make it accessible within the network. When adding one you can paste the base64-encoded contents of an existing i2pd `.dat` key file to reuse a known address, or leave it blank to generate a fresh one.
+
+## Router Console
+Open the **I2P Router Console** from this service's Interfaces section to monitor the router: network status (OK / Firewalled), tunnel creation success rate, known routers, and active tunnels.
 
 ## NAT and Reachability
 I2P may work behind a NAT out of the box by using intermediary relay nodes. If it does not, or your tunnels remain unreachable, you will need to manually port-forward.
