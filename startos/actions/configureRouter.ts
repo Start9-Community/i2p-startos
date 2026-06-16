@@ -1,5 +1,8 @@
-import { i2pdConfig, generateI2pdConf, generateTunnelsConf } from '../fileModels/i2pd'
-import { writeFile } from 'fs/promises'
+import {
+  i2pdConfig,
+  generateI2pdConf,
+  generateTunnelsConf,
+} from '../fileModels/i2pd'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 
@@ -56,7 +59,7 @@ const inputSpec = InputSpec.of({
   reseedUrl: Value.text({
     name: i18n('Custom Reseed URL'),
     description: i18n(
-      'HTTPS URL of a custom i2p reseed server (su3 format). Set to your own i2pd floodfill node\'s reseed endpoint to bootstrap the peer pool with known O-type peers from the start. Leave blank to use default reseed servers.',
+      "HTTPS URL of a custom i2p reseed server (su3 format). Set to your own i2pd floodfill node's reseed endpoint to bootstrap the peer pool with known O-type peers from the start. Leave blank to use default reseed servers.",
     ),
     required: false,
     default: null,
@@ -126,8 +129,14 @@ export const configureRouter = sdk.Action.withInput(
     }
 
     await i2pdConfig.write(effects, updatedConfig)
-    await sdk.volumes.i2pd.writeFile('etc/i2pd/i2pd.conf', generateI2pdConf(updatedConfig))
-    await sdk.volumes.i2pd.writeFile('etc/i2pd/tunnels.conf', generateTunnelsConf(updatedConfig))
+    await sdk.volumes.i2pd.writeFile(
+      'etc/i2pd/i2pd.conf',
+      generateI2pdConf(updatedConfig),
+    )
+    await sdk.volumes.i2pd.writeFile(
+      'etc/i2pd/tunnels.conf',
+      generateTunnelsConf(updatedConfig),
+    )
     await effects.restart()
   },
 )

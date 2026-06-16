@@ -16,7 +16,7 @@ I2P network. Provides SOCKS and HTTP proxies for accessing I2P addresses, and
 can optionally operate as a floodfill node to support the network.
 
 - **Upstream repo:** <https://github.com/PurpleI2P/i2pd>
-- **Wrapper repo:** <https://github.com/crissuper20/i2p-startos>
+- **Wrapper repo:** <https://github.com/Start9-Community/i2p-startos>
 
 ---
 
@@ -43,7 +43,7 @@ can optionally operate as a floodfill node to support the network.
 | ------------- | --------------------------------------------- |
 | Base image    | Alpine Linux edge with upstream `i2pd` package |
 | Architectures | x86_64, aarch64, riscv64                      |
-| Entrypoint    | `i2pd --conf=/var/lib/i2pd/i2pd.conf --datadir=/var/lib/i2pd` |
+| Command       | `i2pd --conf=/var/lib/i2pd/etc/i2pd/i2pd.conf --datadir=/var/lib/i2pd` |
 | User          | `i2pd` (non-root)                              |
 
 The image is minimal, just Alpine + the `i2pd` package. No custom patches
@@ -57,10 +57,12 @@ or modifications to the I2Pd binary.
 | --------- | --------------- | ------------------------------------------------------ |
 | `i2pd`    | `/var/lib/i2pd` | I2P data directory, tunnel keys, config files          |
 
-The `i2pd.conf` and `tunnels.conf` files are stored on the `i2pd` volume and
-are the single source of truth for all I2P tunnel and floodfill settings. They
-are generated from structured data and round-trip cleanly (metadata is embedded
-as `# @service` comment annotations).
+The single source of truth for all settings is `config.json` on the `i2pd`
+volume (a zod-typed file model). The native `i2pd.conf` and `tunnels.conf`
+files under `etc/i2pd/` on the volume are write-only artifacts regenerated
+from `config.json` on every start, on init, and after every action; i2pd is
+pointed at them via `--conf`, and `tunnels.conf` changes are hot-reloaded
+through the web console without a restart.
 
 I2P tunnel keys are stored under
 `/var/lib/i2pd/tunnels/<packageId>/<hostId>/tunnel_<index>/`.
@@ -88,7 +90,8 @@ There is no upstream configuration UI.
 | SOCKS proxy port      | Hardcoded   | Always `0.0.0.0:4447`                       |
 | HTTP proxy port       | Hardcoded   | Always `0.0.0.0:4444`                       |
 | Data directory        | Hardcoded   | Always `/var/lib/i2pd`                       |
-| HTTP API              | Hardcoded   | `127.0.0.1:7070` (for health checks)         |
+| Web console           | Hardcoded   | `0.0.0.0:7070` (UI interface; also used for health checks and hot-reload) |
+| SSU2 / NTCP2 ports    | Hardcoded   | `4450` (UDP) / `4451` (TCP)                  |
 
 ---
 
@@ -109,6 +112,18 @@ There is no upstream configuration UI.
 - **Purpose:** HTTP access to .b32.i2p addresses
 - **Binding:** `0.0.0.0:4444` (accessible to other services and LAN)
 - **Limitation:** Cannot be used as a general privacy proxy
+
+### Router Console (web UI)
+
+- **Port:** 7070
+- **Type:** UI interface ("I2P Router Console")
+- **Purpose:** Monitor and manage the I2P router (network status, tunnels, known routers)
+- **Note:** `strictheaders` is disabled so the StartOS reverse proxy can reach it; authentication is handled by StartOS
+
+### SSU2 / NTCP2 Transports (p2p)
+
+- **Ports:** 4450 (SSU2, UDP) and 4451 (NTCP2, TCP)
+- **Purpose:** Fixed inbound transport ports so consistent port-forwarding rules are possible; forwarding them on your router (plus setting **External IP / Hostname**) lets the router classify as directly reachable ("O-type")
 
 ### Floodfill Node (conditional)
 
@@ -131,13 +146,9 @@ There is no upstream configuration UI.
   - **Bandwidth** -- Low (32 KB/s), Standard (256 KB/s), High (full speed), Unlimited (default: Standard)
   - **Transit Tunnels** -- relay traffic for other I2P users (default: on)
   - **Log Level** -- none / error / warn / info / debug (default: warn)
-
-### Reseed Router
-
-- **ID:** `reseed-router`
-- **Visibility:** Enabled (user-facing)
-- **Purpose:** Re-download router information from reseed servers
-- **Availability:** Any status
+  - **External IP / Hostname** -- published in RouterInfo instead of peer-test auto-detection (fixes Symmetric NAT classification under double-NAT; optional)
+  - **Custom Reseed URL** -- HTTPS su3 reseed endpoint used instead of the default reseed servers (optional)
+- **Effect:** Rewrites `i2pd.conf`/`tunnels.conf` and restarts the service (`i2pd.conf` is not hot-reloadable)
 
 ### Add I2P Tunnel (hidden)
 
@@ -182,13 +193,15 @@ any service's interface directly from the service's URL table.
 
 ## Health Checks
 
-- **Method:** Queries I2Pd's HTTP API on `127.0.0.1:7070`
+- **Method:** Liveness check against the i2pd web console on `127.0.0.1:7070`
 - **States:**
-  - **Loading** -- "I2Pd is loading — integrating into network (this takes several minutes)"
-  - **Success** -- "I2Pd is running" (once fully bootstrapped)
-  - **Failure** -- "I2Pd is not responding" (HTTP API unreachable or timeout)
+  - **Loading** -- "I2Pd is starting up" (connection refused; console not open yet)
+  - **Success** -- "I2Pd is running" (console responds 200)
+  - **Failure** -- "I2Pd is not responding" (timeout) / "I2Pd HTTP API error" (non-200)
 - **Timeout:** 5 seconds per check
-- **Note:** Bootstrap typically takes **3-10 minutes** vs. 30 seconds for Tor
+- **Note:** This is a daemon-liveness check, not a network-integration check.
+  Full integration into the I2P network takes **3-10 minutes** after the check
+  reports success (an install alert sets this expectation for the user)
 
 ---
 
@@ -227,15 +240,16 @@ volumes:
 ports:
   socks: 4447 (I2P-network-only, 0.0.0.0)
   http_proxy: 4444 (I2P-network-only, 0.0.0.0)
-  http_api: 7070 (localhost, health checks only)
+  console: 7070 (web UI; also health checks and hot-reload)
+  ssu2: 4450 (UDP transport)
+  ntcp2: 4451 (TCP transport)
 dependencies: none
 plugins: [url-v0]
 startos_managed_config:
-  - i2pd.conf (generated from structured data)
-  - tunnels.conf (generated from structured data, round-trips via comment annotations)
+  - config.json (source of truth, zod file model)
+  - i2pd.conf / tunnels.conf (write-only, regenerated from config.json)
 actions:
   - configure-router (user-facing)
-  - reseed-router (user-facing)
   - add-i2p-tunnel (hidden, URL plugin)
   - delete-i2p-tunnel (hidden, URL plugin)
 languages: [en_US, es_ES, de_DE, pl_PL, fr_FR]

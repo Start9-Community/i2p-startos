@@ -41,7 +41,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     description: i18n('HTTP proxy for I2P network (i2p addresses only)'),
     type: 'api',
     masked: false,
-    schemeOverride: null, 
+    schemeOverride: null,
     username: null,
     path: '',
     query: {},
@@ -54,15 +54,12 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   const consoleOrigin = await consoleMulti.bindPort(7070, {
     protocol: 'http',
     preferredExternalPort: 7070,
-    addSsl: undefined,
   })
 
   const consoleInterface = sdk.createInterface(effects, {
     name: i18n('I2P Router Console'),
     id: 'console',
-    description: i18n(
-      'Web console for monitoring and managing the I2P router',
-    ),
+    description: i18n('Web console for monitoring and managing the I2P router'),
     type: 'ui',
     masked: false,
     schemeOverride: { ssl: 'https', noSsl: 'http' },
@@ -73,10 +70,10 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
 
   const consoleReceipt = await consoleOrigin.export([consoleInterface])
 
-  // Bind the SSU2 (UDP-like TCP fallback) and NTCP2 transport ports so
-  // StartOS / UPnP can forward them from the external network.  Without
-  // a consistent external port mapping i2pd shows "Firewalled - Symmetric NAT"
-  // and inbound tunnel delivery fails, which breaks server tunnels.
+  // Bind the SSU2 (UDP) and NTCP2 (TCP) transport ports so StartOS / UPnP
+  // can forward them from the external network.  Without a consistent
+  // external port mapping i2pd shows "Firewalled - Symmetric NAT" and
+  // inbound tunnel delivery fails, which breaks server tunnels.
   const ssu2Multi = sdk.MultiHost.of(effects, 'ssu2-multi')
   const ssu2Origin = await ssu2Multi.bindPort(4450, {
     protocol: null,

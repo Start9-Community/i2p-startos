@@ -1,5 +1,10 @@
-import { rm, writeFile } from 'fs/promises'
-import { i2pdConfig, tunnelDir, generateI2pdConf, generateTunnelsConf } from '../fileModels/i2pd'
+import { rm } from 'fs/promises'
+import {
+  i2pdConfig,
+  tunnelDir,
+  generateI2pdConf,
+  generateTunnelsConf,
+} from '../fileModels/i2pd'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { reloadI2pdTunnels } from '../utils'
@@ -37,8 +42,15 @@ export const deleteI2pTunnel = sdk.Action.withInput(
   async () => null,
 
   async ({ effects, input }) => {
-    const { packageId, hostId, hostname, port, ssl } = input.urlPluginMetadata
-    if (!packageId) return
+    const {
+      packageId: rawPkgId,
+      hostId,
+      hostname,
+      port,
+      ssl,
+    } = input.urlPluginMetadata
+    // null packageId means the StartOS system UI interface (no backing package)
+    const packageId = rawPkgId ?? 'STARTOS'
 
     const config = await i2pdConfig.read().once()
     const i2pServices = structuredClone(config?.i2pServices || {})
@@ -71,10 +83,10 @@ export const deleteI2pTunnel = sdk.Action.withInput(
       // If no ports remain, remove the entire entry and clean up files
       if (Object.keys(svc.ports).length === 0) {
         delete services[key]
-        await rm(
-          sdk.volumes.i2pd.subpath(tunnelDir(packageId, hostId, key)),
-          { recursive: true, force: true },
-        )
+        await rm(sdk.volumes.i2pd.subpath(tunnelDir(packageId, hostId, key)), {
+          recursive: true,
+          force: true,
+        })
       }
       break
     }
@@ -90,11 +102,21 @@ export const deleteI2pTunnel = sdk.Action.withInput(
     const updatedConfig = {
       i2pServices,
       floodfill: config?.floodfill ?? { enabled: false },
-      router: config?.router ?? { bandwidth: 'O' as const, transit: true, loglevel: 'warn' as const },
+      router: config?.router ?? {
+        bandwidth: 'O' as const,
+        transit: true,
+        loglevel: 'warn' as const,
+      },
     }
     await i2pdConfig.write(effects, updatedConfig)
-    await sdk.volumes.i2pd.writeFile('etc/i2pd/i2pd.conf', generateI2pdConf(updatedConfig))
-    await sdk.volumes.i2pd.writeFile('etc/i2pd/tunnels.conf', generateTunnelsConf(updatedConfig))
-    await reloadI2pdTunnels()
+    await sdk.volumes.i2pd.writeFile(
+      'etc/i2pd/i2pd.conf',
+      generateI2pdConf(updatedConfig),
+    )
+    await sdk.volumes.i2pd.writeFile(
+      'etc/i2pd/tunnels.conf',
+      generateTunnelsConf(updatedConfig),
+    )
+    await reloadI2pdTunnels(effects)
   },
 )

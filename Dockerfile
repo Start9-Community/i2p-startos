@@ -2,11 +2,8 @@ FROM alpine:edge@sha256:9a341ff2287c54b86425cbee0141114d811ae69d88a36019087be6d8
 
 ARG I2PD_VERSION=2.60.0-r1
 
-RUN apk add --no-cache \
-    i2pd=${I2PD_VERSION} && \
-    mkdir -p /var/lib/i2pd /etc/i2pd && \
-    ln -s /usr/share/i2pd/certificates /var/lib/i2pd/certificates && \
-    chown -R i2pd:i2pd /var/lib/i2pd
+RUN apk add --no-cache i2pd=${I2PD_VERSION}
 
 USER i2pd
-ENTRYPOINT ["i2pd", "--conf=/etc/i2pd/i2pd.conf", "--datadir=/var/lib/i2pd"]
+ENTRYPOINT ["i2pd"]
+CMD ["--conf=/etc/i2pd/i2pd.conf", "--datadir=/var/lib/i2pd"]
